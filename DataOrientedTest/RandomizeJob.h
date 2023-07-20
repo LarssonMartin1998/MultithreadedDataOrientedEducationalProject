@@ -1,12 +1,10 @@
 #pragma once
 
-#include <iostream>
 #include <array>
 
 #include "Entity.h"
 
 namespace RandomizeJob
 {
-    template<std::size_t SIZE>
-    void Run(std::array<Position, SIZE>& positions, std::array<Velocity, SIZE>& velocities, std::array<Physics, SIZE>& physics);
+    void Run(std::array<Entity::Position, Entity::numEntities>& positions, std::array<Entity::Velocity, Entity::numEntities>& velocities, std::array<Entity::Physics, Entity::numEntities>& physics);
 }

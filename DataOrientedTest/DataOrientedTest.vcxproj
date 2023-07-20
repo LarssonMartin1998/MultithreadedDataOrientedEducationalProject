@@ -156,6 +156,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="DataOrientedTest.cpp" />
+    <ClCompile Include="RandomizeJob.cpp" />
+    <ClCompile Include="SimulateMotionJob.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Entity.h" />
+    <ClInclude Include="RandomizeJob.h" />
+    <ClInclude Include="SimulateMotionJob.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
