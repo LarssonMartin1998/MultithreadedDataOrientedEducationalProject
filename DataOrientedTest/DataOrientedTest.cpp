@@ -1,4 +1,5 @@
-#include <cstdio>
+#include <iostream>
+#include <format>
 #include <array>
 
 #include "Entity.h"
@@ -9,11 +10,11 @@ void PrintEntities(const std::array<Entity::Position, Entity::numEntities>& posi
 {
     for (size_t i = 0; i < positions.size(); i++)
     {
-        printf("\nEntity: %zu", i);
-        printf("\nPos: x=%f, y=%f", positions[i].pos.x, positions[i].pos.y);
-        printf("\nEntity::Velocity: x=%f, y=%f, speed=%f", velocities[i].direction.x, velocities[i].direction.y, velocities[i].speed);
-        printf("\nEntity::Physics: mass=%f, acceleration=%f", physics[i].mass, physics[i].acceleration);
-        printf("\n----------------------------");
+        std::cout << std::format("\nEntity: {}", i);
+        std::cout << std::format("\nPos: x={}, y={}", positions[i].pos.x, positions[i].pos.y);
+        std::cout << std::format("\nVelocity: x={}, y={}, speed={}", velocities[i].direction.x, velocities[i].direction.y, velocities[i].speed);
+        std::cout << std::format("\nPhysics: mass={}, acceleration={}", physics[i].mass, physics[i].acceleration);
+        std::cout << std::format("\n----------------------------");
     }
 }
 

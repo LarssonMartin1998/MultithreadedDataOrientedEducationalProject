@@ -1,5 +1,6 @@
 #include "SimulateMotionJob.h"
 
+#include <iostream>
 #include <thread>
 #include <mutex>
 #include <algorithm>
@@ -48,7 +49,7 @@ namespace SimulateMotionJob
             const int currentSecondInt = static_cast<int>(totalTime.count());
             if (lastSecondInt != currentSecondInt)
             {
-                printf("\n%i", currentSecondInt);
+                std::cout << std::endl << currentSecondInt;
             }
             
             std::thread velocitiesThread = std::thread(&UpdateVelocities, std::ref(velocities), std::ref(physics), std::ref(mutexes), deltaTime);

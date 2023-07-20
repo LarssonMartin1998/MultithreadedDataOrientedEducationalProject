@@ -4,7 +4,7 @@
 
 namespace Entity
 {
-    constexpr size_t numEntities = 500;
+    constexpr size_t numEntities = 5;
     
     struct Vector2
     {
