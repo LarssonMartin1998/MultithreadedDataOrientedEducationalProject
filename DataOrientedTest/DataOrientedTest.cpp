@@ -1,22 +1,13 @@
 #include <iostream>
-#include <format>
+#include <thread>
 #include <array>
+#include <chrono>
 
+#include "Vector.h"
 #include "Entity.h"
 #include "RandomizeJob.h"
 #include "SimulateMotionJob.h"
-
-void PrintEntities(const std::array<Entity::Position, Entity::numEntities>& positions, const std::array<Entity::Velocity, Entity::numEntities>& velocities, const std::array<Entity::Physics, Entity::numEntities>& physics)
-{
-    for (size_t i = 0; i < positions.size(); i++)
-    {
-        std::cout << std::format("\nEntity: {}", i);
-        std::cout << std::format("\nPos: x={}, y={}", positions[i].pos.x, positions[i].pos.y);
-        std::cout << std::format("\nVelocity: x={}, y={}, speed={}", velocities[i].direction.x, velocities[i].direction.y, velocities[i].speed);
-        std::cout << std::format("\nPhysics: mass={}, acceleration={}", physics[i].mass, physics[i].acceleration);
-        std::cout << std::format("\n----------------------------");
-    }
-}
+#include "RenderJob.h"
 
 int main()
 {
@@ -25,9 +16,30 @@ int main()
     std::array<Entity::Physics, Entity::numEntities> physics {};
 
     RandomizeJob::Run(positions, velocities, physics);
-    PrintEntities(positions, velocities, physics);
-    SimulateMotionJob::Run(positions, velocities, physics);
-    PrintEntities(positions, velocities, physics);
+    RenderJob renderJob(velocities, physics);
 
+    constexpr float simTimeSeconds = 3.5f;
+    const std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+    std::chrono::high_resolution_clock::time_point last = start;
+    std::chrono::duration<float> totalTime = last - start;
+    while (totalTime.count() < simTimeSeconds)
+    {
+        const std::chrono::high_resolution_clock::time_point current = std::chrono::high_resolution_clock::now();
+        totalTime = current - start;
+        const float deltaTime = static_cast<std::chrono::duration<float>>(current - last).count();
+
+        std::array<Entity::Position, Entity::numEntities> lastPositions = positions;
+        std::thread* renderThread = renderJob.Run(lastPositions);
+        std::thread* simulateMotionThread = SimulateMotionJob::Run(positions, velocities, physics, deltaTime);
+
+        renderThread->join();
+        simulateMotionThread->join();
+
+        delete renderThread;
+        delete simulateMotionThread;
+
+        last = current;
+    }
+    
     return 0;
 }

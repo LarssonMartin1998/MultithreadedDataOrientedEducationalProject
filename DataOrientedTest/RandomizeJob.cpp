@@ -14,7 +14,7 @@ namespace RandomizeJob
     void RandomizePositions(std::array<Entity::Position, Entity::numEntities>& positions)
     {
         std::mt19937 generator = GetRandomGenerator();
-        std::uniform_real_distribution range(-50.0f, 50.0f);
+        std::uniform_real_distribution range(-20.0f, 20.0f);
     
         for (auto& [pos] : positions)
         {
@@ -26,7 +26,7 @@ namespace RandomizeJob
     void RandomizeVelocities(std::array<Entity::Velocity, Entity::numEntities>& velocities)
     {
         std::mt19937 generator = GetRandomGenerator();
-        std::uniform_real_distribution speedRange(0.0f, 80.0f);
+        std::uniform_real_distribution speedRange(0.0f, 20.0f);
         std::uniform_real_distribution directionRange(-1.0f, 1.0f);
     
         for (auto& [speed, direction] : velocities)
@@ -44,8 +44,8 @@ namespace RandomizeJob
     void RandomizePhysics(std::array<Entity::Physics, Entity::numEntities>& physics)
     {
         std::mt19937 generator = GetRandomGenerator();
-        std::uniform_real_distribution massRange(40.0f, 100.0f);
-        std::uniform_real_distribution accelerationRange(-8.0f, 8.0f);
+        std::uniform_real_distribution massRange(40.0f, 80.0f);
+        std::uniform_real_distribution accelerationRange(-3.0f, 3.0f);
     
         for (auto& [mass, acceleration] : physics)
         {

@@ -2,15 +2,11 @@
 
 #include <cstddef>
 
+#include "Vector.h"
+
 namespace Entity
 {
     constexpr size_t numEntities = 5;
-    
-    struct Vector2
-    {
-        float x;
-        float y;
-    };
     
     struct Position
     {
