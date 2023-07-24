@@ -3,6 +3,8 @@
 #include <iostream>
 #include <format>
 #include <cmath>
+#include <algorithm>
+#include <ncurses.h>
 
 #include "Vector.h"
 
@@ -34,6 +36,40 @@ const std::array<char, static_cast<size_t>(DirectionalCharacter::NUM_DIRECTIONS)
 
 RenderJob::RenderJob(const std::array<Entity::Velocity, Entity::numEntities>& velocities, const std::array<Entity::Physics, Entity::numEntities>& physics)
 {
+    InitializeConsole();
+    InitializeDrawProperties(velocities, physics);
+    ClearBackBuffer();
+}
+
+RenderJob::~RenderJob()
+{
+    ShutDownConsole();
+}
+
+std::thread* RenderJob::Run(const std::array<Entity::Position, Entity::numEntities>& positions)
+{
+    auto lambda = [this](const std::array<Entity::Position, Entity::numEntities>& inPositions)
+    {
+        this->SwapBuffers();
+        this->ClearBackBuffer();
+
+        this->WriteWorld();
+        this->WriteEntities(inPositions);
+    };
+
+    return new std::thread(lambda, std::ref(positions));
+}
+
+void RenderJob::InitializeConsole()
+{
+    initscr();
+    cbreak();
+    noecho();
+    curs_set(0);
+}
+
+void RenderJob::InitializeDrawProperties(const std::array<Entity::Velocity, Entity::numEntities>& velocities, const std::array<Entity::Physics, Entity::numEntities>& physics)
+{
     constexpr float massThreshold = 50.0f;
     for (size_t i = 0; i < Entity::numEntities; i++)
     {
@@ -42,46 +78,36 @@ RenderJob::RenderJob(const std::array<Entity::Velocity, Entity::numEntities>& ve
     }
 }
 
-std::thread* RenderJob::Run(const std::array<Entity::Position, Entity::numEntities>& positions)
+void RenderJob::ShutDownConsole()
 {
-    auto lambda = [this](const std::array<Entity::Position, Entity::numEntities>& inPositions)
-    {
-        this->PrintWorld(inPositions);
-    };
-
-    return new std::thread(lambda, std::ref(positions));
+    endwin();
 }
 
-void RenderJob::PrintWorld(const std::array<Entity::Position, Entity::numEntities>& positions)
+void RenderJob::WriteToBackBuffer(const size_t x, const size_t y, const char character)
 {
-    constexpr size_t worldSize = 65;
-    system("clear");
+    const size_t bufferIndex = y * consoleWidth + x;
+    backBuffer[bufferIndex] = character;
+}
 
-    PrintHorizontal(worldSize);
-
-    const size_t centerIndex = GetLineCenterIndex(worldSize);
-    for (size_t i = 0; i < worldSize - 2; i++)
+void RenderJob::ClearBackBuffer()
+{
+    for (char& character : backBuffer)
     {
-        char fill;
-        char center;
-        char spacing;
-        if (i == centerIndex)
-        {
-            fill = '-';
-            center = 'O';
-            spacing = fill;
-        }
-        else
-        {
-            fill = ' ';
-            center = '|';
-            spacing = ' ';
-        }
+        character = ' ';
+    }
+}
 
-        PrintVerticalRow(worldSize, fill, center, spacing, i, positions);
+void RenderJob::SwapBuffers()
+{
+    for (size_t i = 0; i < consoleWidth * worldHeight; i++)
+    {
+        const size_t x = i % consoleWidth;
+        const size_t y = i / consoleWidth;
+        mvaddch(y, x, backBuffer[i]);
+        drawBuffer[i] = backBuffer[i];
     }
 
-    PrintHorizontal(worldSize);
+    refresh();
 }
 
 char RenderJob::ConvertDirectionToCharacter(Vector2 direction)
@@ -101,52 +127,75 @@ char RenderJob::ConvertDirectionToCharacter(Vector2 direction)
     return directionalCharacters[bestDirection];
 }
 
-size_t RenderJob::GetLineCenterIndex(const size_t worldSize)
+size_t RenderJob::GetCenterForAxis(const size_t axisSize)
 {
-    return worldSize / 2 - 1;
+    return axisSize / 2 - 1;
 }
 
-void RenderJob::PrintHorizontal(const size_t worldSize)
+Vector2 RenderJob::GetConsoleCoordsFromWorldPos(const Vector2& position)
 {
-    for (size_t i = 0; i < worldSize; i++)
+    const Vector2 worldLimit(static_cast<float>(GetCenterForAxis(worldWidth) - 1), static_cast<float>(GetCenterForAxis(worldHeight)) - 1);
+    const Vector2 clampedPos(std::clamp(position.x, -worldLimit.x, worldLimit.x), std::clamp(position.y, -worldLimit.y, worldLimit.y));
+    const size_t widthAdder = GetCenterForAxis(consoleWidth);
+    const size_t heightAdder = GetCenterForAxis(worldHeight);
+    return Vector2(std::floor(clampedPos.x * 2.0f) + widthAdder, std::floor(-clampedPos.y) + heightAdder);
+}
+
+void RenderJob::WriteWorld()
+{
+    WriteHorizontal(0);
+    WriteHorizontal(worldHeight - 1);
+    WriteVertical(0);
+    WriteVertical(consoleWidth - 1);
+    WriteXAxis();
+    WriteYAxis();
+    WriteOrigo();
+}
+
+void RenderJob::WriteHorizontal(const size_t column)
+{
+    for (size_t i = 0; i < consoleWidth; i++)
     {
-        std::cout << "X ";
+        WriteToBackBuffer(i, column, 'X');
     }
-
-    std::cout << std::endl;
 }
 
-void RenderJob::PrintVerticalRow(const size_t worldSize, const char fill, const char center, const char spacing, const size_t rowIndex, const std::array<Entity::Position, Entity::numEntities>& positions)
+void RenderJob::WriteVertical(const size_t row)
 {
-    std::cout << "X ";
-    const size_t centerIndex = GetLineCenterIndex(worldSize);
-    for (size_t i = 0; i < worldSize - 2; i++)
+    for (size_t i = 0; i < worldHeight; i++)
     {
-        const char active = i == centerIndex ? center : fill;
-        char final = active;
-        for (size_t j = 0; j < positions.size(); j++)
-        {
-            if (IsWorldPosEqualToConsolePos(worldSize, i, rowIndex, positions[j].pos))
-            {
-                final = drawProperties[j].direction;
-                break;
-            }
-        }
-
-        std::cout << std::format("{}{}", final, spacing);
+        WriteToBackBuffer(row, i, 'X');
     }
-
-    std::cout << 'X' << std::endl;
 }
 
-Vector2 RenderJob::GetConsoleCoordsFromWorldPos(const size_t worldSize, const Vector2& position)
+void RenderJob::WriteXAxis()
 {
-    const int adder = GetLineCenterIndex(worldSize);
-    return Vector2(std::floor(position.x) + adder, std::floor(-position.y) + adder);
+    const size_t row = GetCenterForAxis(worldHeight);
+    for (size_t i = 1; i < consoleWidth - 1; i++)
+    {
+        WriteToBackBuffer(i, row, '-');
+    }
 }
 
-bool RenderJob::IsWorldPosEqualToConsolePos(const size_t worldSize, const size_t column, const size_t row, const Vector2& position)
+void RenderJob::WriteYAxis()
 {
-    const Vector2 converted = GetConsoleCoordsFromWorldPos(worldSize, position);
-    return column == static_cast<size_t>(converted.x) && row == static_cast<size_t>(converted.y);
+    const size_t column = GetCenterForAxis(consoleWidth);
+    for (size_t i = 1; i < worldHeight - 1; i++)
+    {
+        WriteToBackBuffer(column, i, '|');
+    }
+}
+
+void RenderJob::WriteOrigo()
+{
+    WriteToBackBuffer(GetCenterForAxis(consoleWidth), GetCenterForAxis(worldHeight), 'O');
+}
+
+void RenderJob::WriteEntities(const std::array<Entity::Position, Entity::numEntities>& positions)
+{
+    for (size_t i = 0; i < positions.size(); i++)
+    {
+        const Vector2 consoleCoords = GetConsoleCoordsFromWorldPos(positions[i].pos);
+        WriteToBackBuffer(consoleCoords.x, consoleCoords.y, drawProperties[i].direction);
+    }
 }
