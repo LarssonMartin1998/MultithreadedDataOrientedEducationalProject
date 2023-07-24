@@ -19,7 +19,7 @@ int main()
     RenderJob renderJob(velocities, physics);
 
     size_t numFrames = 0;
-    constexpr float simTimeSeconds = 10.0f;
+    constexpr float simTimeSeconds = 4.0f;
     const std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
     std::chrono::high_resolution_clock::time_point last = start;
     std::chrono::duration<float> totalTime = last - start;
