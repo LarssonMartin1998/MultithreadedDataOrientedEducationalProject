@@ -38,12 +38,8 @@ RenderJob::RenderJob(const std::array<Entity::Velocity, Entity::numEntities>& ve
 {
     InitializeConsole();
     InitializeDrawProperties(velocities, physics);
+    FillClearBuffer();
     ClearBackBuffer();
-}
-
-RenderJob::~RenderJob()
-{
-    ShutDownConsole();
 }
 
 std::thread* RenderJob::Run(const std::array<Entity::Position, Entity::numEntities>& positions)
@@ -52,12 +48,15 @@ std::thread* RenderJob::Run(const std::array<Entity::Position, Entity::numEntiti
     {
         this->SwapBuffers();
         this->ClearBackBuffer();
-
-        this->WriteWorld();
         this->WriteEntities(inPositions);
     };
 
     return new std::thread(lambda, std::ref(positions));
+}
+
+void RenderJob::ShutDownConsole()
+{
+    endwin();
 }
 
 void RenderJob::InitializeConsole()
@@ -78,23 +77,35 @@ void RenderJob::InitializeDrawProperties(const std::array<Entity::Velocity, Enti
     }
 }
 
-void RenderJob::ShutDownConsole()
+void RenderJob::WriteToBuffer(std::array<char, RenderJob::bufferSize>& buffer, const size_t x, const size_t y, const char character)
 {
-    endwin();
+    const size_t index = y * consoleWidth + x;
+    buffer[index] = character;
 }
 
 void RenderJob::WriteToBackBuffer(const size_t x, const size_t y, const char character)
 {
-    const size_t bufferIndex = y * consoleWidth + x;
-    backBuffer[bufferIndex] = character;
+    WriteToBuffer(backBuffer, x, y, character);
+}
+
+void RenderJob::WriteToClearBuffer(const size_t x, const size_t y, const char character)
+{
+    WriteToBuffer(clearBuffer, x, y, character);
+}
+
+void RenderJob::FillClearBuffer()
+{
+    for (char& character : clearBuffer)
+    {
+        character = ' ';
+    }
+
+    WriteWorld();
 }
 
 void RenderJob::ClearBackBuffer()
 {
-    for (char& character : backBuffer)
-    {
-        character = ' ';
-    }
+    backBuffer = clearBuffer;
 }
 
 void RenderJob::SwapBuffers()
@@ -156,7 +167,7 @@ void RenderJob::WriteHorizontal(const size_t column)
 {
     for (size_t i = 0; i < consoleWidth; i++)
     {
-        WriteToBackBuffer(i, column, 'X');
+        WriteToClearBuffer(i, column, 'X');
     }
 }
 
@@ -164,7 +175,7 @@ void RenderJob::WriteVertical(const size_t row)
 {
     for (size_t i = 0; i < worldHeight; i++)
     {
-        WriteToBackBuffer(row, i, 'X');
+        WriteToClearBuffer(row, i, 'X');
     }
 }
 
@@ -173,7 +184,7 @@ void RenderJob::WriteXAxis()
     const size_t row = GetCenterForAxis(worldHeight);
     for (size_t i = 1; i < consoleWidth - 1; i++)
     {
-        WriteToBackBuffer(i, row, '-');
+        WriteToClearBuffer(i, row, '-');
     }
 }
 
@@ -182,13 +193,13 @@ void RenderJob::WriteYAxis()
     const size_t column = GetCenterForAxis(consoleWidth);
     for (size_t i = 1; i < worldHeight - 1; i++)
     {
-        WriteToBackBuffer(column, i, '|');
+        WriteToClearBuffer(column, i, '|');
     }
 }
 
 void RenderJob::WriteOrigo()
 {
-    WriteToBackBuffer(GetCenterForAxis(consoleWidth), GetCenterForAxis(worldHeight), 'O');
+    WriteToClearBuffer(GetCenterForAxis(consoleWidth), GetCenterForAxis(worldHeight), 'O');
 }
 
 void RenderJob::WriteEntities(const std::array<Entity::Position, Entity::numEntities>& positions)

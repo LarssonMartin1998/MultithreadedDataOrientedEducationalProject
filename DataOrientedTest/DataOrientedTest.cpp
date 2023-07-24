@@ -18,7 +18,8 @@ int main()
     RandomizeJob::Run(positions, velocities, physics);
     RenderJob renderJob(velocities, physics);
 
-    constexpr float simTimeSeconds = 3.5f;
+    size_t numFrames = 0;
+    constexpr float simTimeSeconds = 10.0f;
     const std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
     std::chrono::high_resolution_clock::time_point last = start;
     std::chrono::duration<float> totalTime = last - start;
@@ -39,7 +40,16 @@ int main()
         delete simulateMotionThread;
 
         last = current;
+        numFrames++;
     }
+
+    renderJob.ShutDownConsole();
+
+
+    system("clear");
+    std::cout << "Num frames: " << numFrames << ", FPS: " << static_cast<float>(numFrames) / simTimeSeconds << ", Frame Time: " << simTimeSeconds * 1000.0f / static_cast<float>(numFrames)
+<< std::endl;
+    std::cin;
     
     return 0;
 }
