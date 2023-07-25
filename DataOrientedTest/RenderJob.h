@@ -39,9 +39,9 @@ private:
     void WriteEntities(const std::array<Entity::Position, Entity::numEntities>& positions);
 
 private:
-    const static size_t worldWidth = 103;
+    const static size_t worldWidth = 83;
     const static size_t consoleWidth = worldWidth * 2; // Double world Width to compensate line margin. Every other character is drawn as a blank to space it out.
-    const static size_t worldHeight = 73;
+    const static size_t worldHeight = 41;
     const static size_t bufferSize = consoleWidth * worldHeight;
 
     std::array<char, bufferSize> clearBuffer;
