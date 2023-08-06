@@ -6,7 +6,7 @@
 
 namespace Entity
 {
-    constexpr size_t numEntities = 215000;
+    constexpr size_t numEntities = 200000;
     
     struct Position
     {

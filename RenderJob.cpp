@@ -1,12 +1,13 @@
 #include "RenderJob.h"
 
 #include <iostream>
-#include <format>
-#include <cmath>
 #include <algorithm>
 #include <ncurses.h>
 
 #include "Vector.h"
+
+float RenderJob::cachedWorldWidthCenter = 0.0f;
+float RenderJob::cachedWorldHeightCenter = 0.0f;
 
 enum class DirectionalCharacter
 {
@@ -34,12 +35,15 @@ const std::array<char, static_cast<size_t>(DirectionalCharacter::NUM_DIRECTIONS)
     '<'
 };
 
-RenderJob::RenderJob(const std::array<Entity::Velocity, Entity::numEntities>& velocities, const std::array<Entity::Physics, Entity::numEntities>& physics)
+RenderJob::RenderJob(const std::array<Entity::Velocity, Entity::numEntities>& velocities)
 {
     InitializeConsole();
-    InitializeDrawProperties(velocities, physics);
+    InitializeDrawProperties(velocities);
     FillClearBuffer();
     ClearBackBuffer();
+
+    cachedWorldWidthCenter = static_cast<float>(GetCenterForAxis(worldWidth));
+    cachedWorldHeightCenter = static_cast<float>(GetCenterForAxis(worldHeight));
 }
 
 std::thread* RenderJob::Run(const std::array<Entity::Position, Entity::numEntities>& positions)
@@ -67,13 +71,11 @@ void RenderJob::InitializeConsole()
     curs_set(0);
 }
 
-void RenderJob::InitializeDrawProperties(const std::array<Entity::Velocity, Entity::numEntities>& velocities, const std::array<Entity::Physics, Entity::numEntities>& physics)
+void RenderJob::InitializeDrawProperties(const std::array<Entity::Velocity, Entity::numEntities>& velocities)
 {
-    constexpr float massThreshold = 50.0f;
     for (size_t i = 0; i < Entity::numEntities; i++)
     {
         drawProperties[i].direction = ConvertDirectionToCharacter(velocities[i].direction);
-        drawProperties[i].isBold = physics[i].mass >= massThreshold;
     }
 }
 
@@ -85,7 +87,7 @@ void RenderJob::WriteToBuffer(std::array<char, RenderJob::bufferSize>& buffer, c
 
 void RenderJob::WriteToBackBuffer(const size_t x, const size_t y, const char character)
 {
-    WriteToBuffer(backBuffer, x, y, character);
+    WriteToBuffer(drawBuffer, x, y, character);
 }
 
 void RenderJob::WriteToClearBuffer(const size_t x, const size_t y, const char character)
@@ -105,7 +107,7 @@ void RenderJob::FillClearBuffer()
 
 void RenderJob::ClearBackBuffer()
 {
-    backBuffer = clearBuffer;
+    drawBuffer = clearBuffer;
 }
 
 void RenderJob::SwapBuffers()
@@ -114,8 +116,7 @@ void RenderJob::SwapBuffers()
     {
         const size_t x = i % consoleWidth;
         const size_t y = i / consoleWidth;
-        mvaddch(y, x, backBuffer[i]);
-        drawBuffer[i] = backBuffer[i];
+        mvaddch(y, x, drawBuffer[i]);
     }
 
     refresh();
@@ -143,39 +144,36 @@ size_t RenderJob::GetCenterForAxis(const size_t axisSize)
     return axisSize / 2 - 1;
 }
 
-Vector2 RenderJob::GetConsoleCoordsFromWorldPos(const Vector2& position)
+void RenderJob::GetConsoleCoordsFromWorldPos(const Vector2& position, size_t& outX, size_t& outY)
 {
-    const Vector2 worldLimit(static_cast<float>(GetCenterForAxis(worldWidth) - 1), static_cast<float>(GetCenterForAxis(worldHeight)) - 1);
-    const Vector2 clampedPos(std::clamp(position.x, -worldLimit.x, worldLimit.x), std::clamp(position.y, -worldLimit.y, worldLimit.y));
-    const size_t widthAdder = GetCenterForAxis(consoleWidth);
-    const size_t heightAdder = GetCenterForAxis(worldHeight);
-    return Vector2(std::floor(clampedPos.x * 2.0f) + widthAdder, std::floor(-clampedPos.y) + heightAdder);
+    outX = static_cast<size_t>((position.x + cachedWorldWidthCenter) * 2.0f) - 1;
+    outY = static_cast<size_t>(-position.y + cachedWorldHeightCenter) - 1;
 }
 
 void RenderJob::WriteWorld()
 {
-    WriteHorizontal(0);
-    WriteHorizontal(worldHeight - 1);
-    WriteVertical(0);
-    WriteVertical(consoleWidth - 1);
+    WriteHorizontal(clearBuffer, 0);
+    WriteHorizontal(clearBuffer, worldHeight - 1);
+    WriteVertical(clearBuffer, 0);
+    WriteVertical(clearBuffer, consoleWidth - 1);
     WriteXAxis();
     WriteYAxis();
     WriteOrigo();
 }
 
-void RenderJob::WriteHorizontal(const size_t column)
+void RenderJob::WriteHorizontal(std::array<char, bufferSize>& buffer, const size_t column)
 {
     for (size_t i = 0; i < consoleWidth; i++)
     {
-        WriteToClearBuffer(i, column, 'X');
+        WriteToBuffer(buffer, i, column, 'X');
     }
 }
 
-void RenderJob::WriteVertical(const size_t row)
+void RenderJob::WriteVertical(std::array<char, bufferSize>& buffer, const size_t row)
 {
     for (size_t i = 0; i < worldHeight; i++)
     {
-        WriteToClearBuffer(row, i, 'X');
+        WriteToBuffer(buffer, row, i, 'X');
     }
 }
 
@@ -206,7 +204,16 @@ void RenderJob::WriteEntities(const std::array<Entity::Position, Entity::numEnti
 {
     for (size_t i = 0; i < positions.size(); i++)
     {
-        const Vector2 consoleCoords = GetConsoleCoordsFromWorldPos(positions[i].pos);
-        WriteToBackBuffer(consoleCoords.x, consoleCoords.y, drawProperties[i].direction);
+        size_t x;
+        size_t y;
+        GetConsoleCoordsFromWorldPos(positions[i].pos, x, y);
+        WriteToBackBuffer(x, y, drawProperties[i].direction);
     }
+
+    // We no longer make sure to keep the entities in side the grid. We let them wander outside, then we draw the borders on top after wards.
+    // This is a bit of a hack, but it's much faster than clamping the positions for the entities 250 000 each frame due to the number of entities were dealing with.
+    WriteHorizontal(drawBuffer, 0);
+    WriteHorizontal(drawBuffer, worldHeight - 1);
+    WriteVertical(drawBuffer, 0);
+    WriteVertical(drawBuffer, consoleWidth - 1);
 }

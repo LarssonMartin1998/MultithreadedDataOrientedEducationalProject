@@ -16,7 +16,7 @@ int main()
     std::array<Entity::Physics, Entity::numEntities> physics {};
 
     RandomizeJob::Run(positions, velocities, physics);
-    RenderJob renderJob(velocities, physics);
+    RenderJob renderJob(velocities);
 
     size_t numFrames = 0;
     constexpr float simTimeSeconds = 4.0f;
@@ -43,13 +43,12 @@ int main()
         numFrames++;
     }
 
-    renderJob.ShutDownConsole();
-
+    RenderJob::ShutDownConsole();
 
     system("clear");
-    std::cout << "Num frames: " << numFrames << ", FPS: " << static_cast<float>(numFrames) / simTimeSeconds << ", Frame Time: " << simTimeSeconds * 1000.0f / static_cast<float>(numFrames)
-<< std::endl;
-    std::cin;
-    
+    const float fps = static_cast<float>(numFrames) / simTimeSeconds;
+    const float frameTime = simTimeSeconds * 1000.0f / static_cast<float>(numFrames);
+    std::cout << "Num frames: " << numFrames << ", FPS: " << fps << ", Frame Time: " << frameTime << std::endl;
+
     return 0;
 }
