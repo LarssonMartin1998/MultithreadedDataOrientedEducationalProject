@@ -11,6 +11,8 @@
 
 #include "SIMDPlatform.h"
 
+//#define RUN_WITHOUT_SIMD
+
 namespace SimulateMotionJob
 {
     constexpr float gravity = 9.82f;

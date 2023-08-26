@@ -6,7 +6,7 @@
 
 namespace Entity
 {
-    constexpr size_t numEntities = 200000;
+    constexpr size_t numEntities = 250000;
     
     struct Position
     {
@@ -21,7 +21,6 @@ namespace Entity
     
     struct Physics
     {
-        float mass;
         float acceleration;
     };
 }

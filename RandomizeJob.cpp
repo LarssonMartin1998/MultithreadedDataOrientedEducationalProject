@@ -44,12 +44,10 @@ namespace RandomizeJob
     void RandomizePhysics(std::array<Entity::Physics, Entity::numEntities>& physics)
     {
         std::mt19937 generator = GetRandomGenerator();
-        std::uniform_real_distribution massRange(40.0f, 80.0f);
         std::uniform_real_distribution accelerationRange(-3.0f, 3.0f);
     
-        for (auto& [mass, acceleration] : physics)
+        for (auto& [acceleration] : physics)
         {
-            mass = massRange(generator);
             acceleration = accelerationRange(generator);
         }
     }

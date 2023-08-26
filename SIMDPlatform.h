@@ -7,6 +7,6 @@ constexpr size_t simdWidth = 8;
 #elif defined(__arm__) || defined(__aarch64__) // ARM
 constexpr size_t simdWidth = 4;
 #else
-#define RUN_WITHOUT_SIMD 1
+#define RUN_WITHOUT_SIMD
 constexpr size_t simdWidth = 1;
 #endif
