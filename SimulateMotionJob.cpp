@@ -41,6 +41,7 @@ namespace SimulateMotionJob
 
 #if defined(__x86_64__) || defined(_M_X64) // x64
         const size_t simdWidth = 8;
+        const __m256 zeroEightLane = _mm256_set1_ps(0.0f);
         const __m256 deltaTimeEightLane = _mm256_set1_ps(deltaTime);
         const __m256 gravityDeltaEightLane = _mm256_set1_ps(gravityDelta);
 #elif defined(__arm__) || defined(__aarch64__)
@@ -117,10 +118,14 @@ namespace SimulateMotionJob
             // Perform SIMD operations
 #if defined(__x86_64__) || defined(_M_X64) // x64
             accel = _mm256_sub_ps(accel, gravityDeltaEightLane);
-            speed = _mm256_max_ps(speed, _mm256_add_ps(speed, _mm256_mul_ps(accel, deltaTimeEightLane)));
+            speed = _mm256_max_ps(_mm256_add_ps(speed, _mm256_mul_ps(accel, deltaTimeEightLane)), zeroEightLane);
+
             const __m256 speedResult = _mm256_mul_ps(speed, deltaTimeEightLane);
-            posX = _mm256_add_ps(posX, _mm256_mul_ps(directionX, speedResult));
-            posY = _mm256_add_ps(posY, _mm256_mul_ps(directionY, speedResult));
+            const __m256 posXStep = _mm256_mul_ps(directionX, speedResult);
+            const __m256 posYStep = _mm256_mul_ps(directionY, speedResult);
+
+            posX = _mm256_add_ps(posX, posXStep);
+            posY = _mm256_add_ps(posY, posYStep);
 #elif defined(__arm__) || defined(__aarch64__) // ARM
             accel = vsubq_f32(accel, gravityDeltaFourLane);
             speed = vmaxq_f32(vaddq_f32(speed, vmulq_f32(accel, deltaTimeFourLane)), zeroFourLane);
