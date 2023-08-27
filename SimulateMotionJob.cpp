@@ -37,6 +37,8 @@ namespace SimulateMotionJob
 
 #if defined(__x86_64__) || defined(_M_X64) // x64
         const size_t simdWidth = 8;
+        const __m256 deltaTimeEightLane = _mm256_set1_ps(deltaTime);
+        const __m256 gravityDeltaEightLane = _mm256_set1_ps(gravityDelta);
 #elif defined(__arm__) || defined(__aarch64__)
         const size_t simdWidth = 4;
         const float32x4_t gravityDeltaFourLane = vdupq_n_f32(gravityDelta);
@@ -103,10 +105,11 @@ namespace SimulateMotionJob
 
             // Perform SIMD operations
 #if defined(__x86_64__) || defined(_M_X64) // x64
-            accel = _mm256_sub_ps(accel, _mm256_set1_ps(gravityDelta));
-            speed = _mm256_max_ps(speed, _mm256_add_ps(speed, _mm256_mul_ps(accel, _mm256_set1_ps(deltaTime))));
-            posX = _mm256_add_ps(posX, _mm256_mul_ps(directionX, _mm256_mul_ps(speed, _mm256_set1_ps(deltaTime))));
-            posY = _mm256_add_ps(posY, _mm256_mul_ps(directionY, _mm256_mul_ps(speed, _mm256_set1_ps(deltaTime))));
+            accel = _mm256_sub_ps(accel, gravityDeltaEightLane);
+            speed = _mm256_max_ps(speed, _mm256_add_ps(speed, _mm256_mul_ps(accel, deltaTimeEightLane)));
+            const __m256 speedResult = _mm256_mul_ps(speed, deltaTimeEightLane);
+            posX = _mm256_add_ps(posX, _mm256_mul_ps(directionX, speedResult));
+            posY = _mm256_add_ps(posY, _mm256_mul_ps(directionY, speedResult));
 #elif defined(__arm__) || defined(__aarch64__) // ARM
             accel = vsubq_f32(accel, gravityDeltaFourLane);
             speed = vmaxq_f32(speed, vmlaq_n_f32(speed, accel, deltaTime));
