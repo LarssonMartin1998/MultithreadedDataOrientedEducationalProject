@@ -82,6 +82,11 @@ void RenderJob::InitializeDrawProperties(const std::array<Entity::Velocity, Enti
 void RenderJob::WriteToBuffer(std::array<char, RenderJob::bufferSize>& buffer, const size_t x, const size_t y, const char character)
 {
     const size_t index = y * consoleWidth + x;
+    if (index >= bufferSize)
+    {
+        return;
+    }
+
     buffer[index] = character;
 }
 
@@ -210,8 +215,8 @@ void RenderJob::WriteEntities(const std::array<Entity::Position, Entity::numEnti
         WriteToBackBuffer(x, y, drawProperties[i].direction);
     }
 
-    // We no longer make sure to keep the entities in side the grid. We let them wander outside, then we draw the borders on top after wards.
-    // This is a bit of a hack, but it's much faster than clamping the positions for the entities 250 000 each frame due to the number of entities were dealing with.
+    // We no longer make sure to keep the entities inside the grid. We let them wander outside, then we draw the borders on top after wards.
+    // This is a bit of a hack, but it's much faster than clamping the positions due to the number of entities were dealing with.
     WriteHorizontal(drawBuffer, 0);
     WriteHorizontal(drawBuffer, worldHeight - 1);
     WriteVertical(drawBuffer, 0);
