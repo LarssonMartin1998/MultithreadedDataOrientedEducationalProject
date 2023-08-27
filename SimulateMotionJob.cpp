@@ -9,14 +9,16 @@
 #include <arm_neon.h>
 #endif
 
+#include "Clocks.h"
 //#define RUN_WITHOUT_SIMD
 
 namespace SimulateMotionJob
 {
     constexpr float gravity = 9.82f;
 
-    inline void IterateAndUpdateMotionOnRemaining(std::array<Entity::Position, Entity::numEntities>& positions, std::array<Entity::Velocity, Entity::numEntities>& velocities, std::array<Entity::Physics, Entity::numEntities>& physics, const float deltaTime, const size_t startIndex, const float gravityDelta)
+    inline void IterateAndUpdateMotionOnRemaining(std::array<Entity::Position, Entity::numEntities>& positions, std::array<Entity::Velocity, Entity::numEntities>& velocities, std::array<Entity::Physics, Entity::numEntities>& physics, const size_t startIndex, const float gravityDelta)
     {
+        const float deltaTime = Clocks::GetDeltaTime();
         for (size_t i = startIndex; i < velocities.size(); i++)
         {
             physics[i].acceleration = physics[i].acceleration - gravityDelta;
@@ -26,12 +28,15 @@ namespace SimulateMotionJob
         }
     }
 
-    inline void UpdateMotion(std::array<Entity::Position, Entity::numEntities>& positions, std::array<Entity::Velocity, Entity::numEntities>& velocities, std::array<Entity::Physics, Entity::numEntities>& physics, const float deltaTime)
+    inline void UpdateMotion(std::array<Entity::Position, Entity::numEntities>& positions, std::array<Entity::Velocity, Entity::numEntities>& velocities, std::array<Entity::Physics, Entity::numEntities>& physics)
     {
+        Clocks::StartSimClock();
+
+        const float deltaTime = Clocks::GetDeltaTime();
         const float gravityDelta = gravity * deltaTime;
 
 #ifdef RUN_WITHOUT_SIMD
-        IterateAndUpdateMotionOnRemaining(positions, velocities, physics, deltaTime, 0, gravityDelta);
+        IterateAndUpdateMotionOnRemaining(positions, velocities, physics, 0, gravityDelta);
         return;
 #else
 
@@ -145,12 +150,14 @@ namespace SimulateMotionJob
 #endif
         }
 
-        IterateAndUpdateMotionOnRemaining(positions, velocities, physics, deltaTime, i, gravityDelta);
+        IterateAndUpdateMotionOnRemaining(positions, velocities, physics, i, gravityDelta);
 #endif
+
+        Clocks::PauseSimClock();
     }
 
-    std::thread* Run(std::array<Entity::Position, Entity::numEntities>& positions, std::array<Entity::Velocity, Entity::numEntities>& velocities, std::array<Entity::Physics, Entity::numEntities>& physics, const float deltaTime)
+    std::thread* Run(std::array<Entity::Position, Entity::numEntities>& positions, std::array<Entity::Velocity, Entity::numEntities>& velocities, std::array<Entity::Physics, Entity::numEntities>& physics)
     {
-        return new std::thread(&UpdateMotion, std::ref(positions), std::ref(velocities), std::ref(physics), deltaTime);
+        return new std::thread(&UpdateMotion, std::ref(positions), std::ref(velocities), std::ref(physics));
     }
 }

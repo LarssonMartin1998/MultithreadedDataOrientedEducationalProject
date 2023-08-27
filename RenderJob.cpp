@@ -5,6 +5,7 @@
 #include <ncurses.h>
 
 #include "Vector.h"
+#include "Clocks.h"
 
 float RenderJob::cachedWorldWidthCenter = 0.0f;
 float RenderJob::cachedWorldHeightCenter = 0.0f;
@@ -50,9 +51,13 @@ std::thread* RenderJob::Run(const std::array<Entity::Position, Entity::numEntiti
 {
     auto lambda = [this](const std::array<Entity::Position, Entity::numEntities>& inPositions)
     {
+        Clocks::StartRenderClock();
+
         this->SwapBuffers();
         this->ClearBackBuffer();
         this->WriteEntities(inPositions);
+
+        Clocks::PauseRenderClock();
     };
 
     return new std::thread(lambda, std::ref(positions));
