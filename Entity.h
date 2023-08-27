@@ -7,7 +7,7 @@
 namespace Entity
 {
     constexpr size_t numEntities = 250000;
-    
+
     struct Position
     {
         Vector2 pos;

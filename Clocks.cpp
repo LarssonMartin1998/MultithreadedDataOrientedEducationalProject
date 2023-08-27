@@ -22,6 +22,7 @@ namespace Clocks
     {
         appStart = std::chrono::high_resolution_clock::now();
         currentFrame = appStart;
+        lastFrame = appStart;
         totalFrame = lastFrame - appStart;
     }
 

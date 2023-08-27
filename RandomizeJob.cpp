@@ -14,7 +14,7 @@ namespace RandomizeJob
     void RandomizePositions(std::array<Entity::Position, Entity::numEntities>& positions)
     {
         std::mt19937 generator = GetRandomGenerator();
-        std::uniform_real_distribution range(-20.0f, 20.0f);
+        std::uniform_real_distribution range(-10.0f, 10.0f);
     
         for (auto& [pos] : positions)
         {

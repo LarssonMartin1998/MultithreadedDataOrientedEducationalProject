@@ -37,7 +37,6 @@ namespace SimulateMotionJob
 
 #ifdef RUN_WITHOUT_SIMD
         IterateAndUpdateMotionOnRemaining(positions, velocities, physics, 0, gravityDelta);
-        return;
 #else
 
 #if defined(__x86_64__) || defined(_M_X64) // x64
@@ -46,10 +45,17 @@ namespace SimulateMotionJob
         const __m256 gravityDeltaEightLane = _mm256_set1_ps(gravityDelta);
 #elif defined(__arm__) || defined(__aarch64__)
         const size_t simdWidth = 4;
+        const float32x4_t zeroFourLane = vdupq_n_f32(0.0f);
+        const float32x4_t deltaTimeFourLane = vdupq_n_f32(deltaTime);
         const float32x4_t gravityDeltaFourLane = vdupq_n_f32(gravityDelta);
 #endif
 
         size_t i = 0;
+        if (Entity::numEntities < simdWidth)
+        {
+            goto calculate_out_of_simd_scope_remainders;
+        }
+
         for (; i < velocities.size(); i += simdWidth)
         {
 #if defined(__x86_64__) || defined(_M_X64) // x64
@@ -117,9 +123,14 @@ namespace SimulateMotionJob
             posY = _mm256_add_ps(posY, _mm256_mul_ps(directionY, speedResult));
 #elif defined(__arm__) || defined(__aarch64__) // ARM
             accel = vsubq_f32(accel, gravityDeltaFourLane);
-            speed = vmaxq_f32(speed, vmlaq_n_f32(speed, accel, deltaTime));
-            posX = vmlaq_n_f32(posX, directionX, deltaTime);
-            posY = vmlaq_n_f32(posY, directionY, deltaTime);
+            speed = vmaxq_f32(vaddq_f32(speed, vmulq_f32(accel, deltaTimeFourLane)), zeroFourLane);
+
+            const float32x4_t speedResult = vmulq_f32(speed, deltaTimeFourLane);
+            const float32x4_t posXStep = vmulq_f32(directionX, speedResult);
+            const float32x4_t posYStep = vmulq_f32(directionY, speedResult);
+
+            posX = vaddq_f32(posX, posXStep);
+            posY = vaddq_f32(posY, posYStep);
 #endif
 
 #if defined(__x86_64__) || defined(_M_X64) // x64
@@ -153,6 +164,7 @@ namespace SimulateMotionJob
 #endif
         }
 
+calculate_out_of_simd_scope_remainders:
         IterateAndUpdateMotionOnRemaining(positions, velocities, physics, i, gravityDelta);
 #endif
 

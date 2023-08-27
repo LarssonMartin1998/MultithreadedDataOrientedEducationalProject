@@ -21,7 +21,7 @@ int main()
     RenderJob renderJob(velocities);
 
     size_t numFrames = 0;
-    constexpr float simTimeSeconds = 10.0f;
+    constexpr float simTimeSeconds = 4.0f;
 
     Clocks::StartAppClock();
     while (Clocks::GetTotalTime() < simTimeSeconds)
@@ -39,7 +39,7 @@ int main()
         std::thread* renderThread = renderJob.Run(lastPositions);
         renderThread->join();
 
-        std::thread* simulateMotionThread = SimulateMotionJob::Run(positions, velocities, physics, deltaTime);
+        std::thread* simulateMotionThread = SimulateMotionJob::Run(positions, velocities, physics);
         simulateMotionThread->join();
 #endif
 
@@ -57,12 +57,24 @@ int main()
         return 0;
     }
 
-    const float fps = static_cast<float>(numFrames) / simTimeSeconds;
-    const float frameTime = simTimeSeconds * 1000.0f / static_cast<float>(numFrames);
+    const float numFramesFloat = static_cast<float>(numFrames);
+    const float fps = numFramesFloat / simTimeSeconds;
+
+    const float averageFrameTime = (Clocks::GetTotalTime() * 1000.0f) / numFramesFloat;
+    const float averageSimTime = (Clocks::GetSimTime() * 1000.0f) / numFramesFloat;
+    const float averageRenderTime = (Clocks::GetRenderTime() * 1000.0f) / numFramesFloat;
+
+    const float highestTime = averageSimTime > averageRenderTime ? averageSimTime : averageRenderTime;
+    const float lowestTime = averageSimTime < averageRenderTime ? averageSimTime : averageRenderTime;
+
     std::cout << "Num frames: " << numFrames << ", Average FPS: " << fps << std::endl;
-    std::cout << "Average Frame Time: " << frameTime << std::endl;
-    std::cout << "Average Sim Thread Time: " << Clocks::GetSimTime() << std::endl;
-    std::cout << "Average Render Thread Time: " << Clocks::GetRenderTime() << std::endl;
+    std::cout << "Average Frame Time: " << averageFrameTime << "ms" << std::endl;
+    std::cout << "Average Sim Thread Time: " << averageSimTime << "ms" << std::endl;
+    std::cout << "Average Render Thread Time: " << averageRenderTime << "ms" << std::endl;
+
+#ifdef RUN_ASYNC
+    std::cout << "Average Waiting Time: " << highestTime - lowestTime << "ms" << std::endl;
+#endif
 
     return 0;
 }
